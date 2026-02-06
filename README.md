@@ -18,7 +18,7 @@ steps:
   - uses: actions/checkout@v4
   
   - name: Setup Makeself
-    uses: henry-hsieh/makeself-action@v1
+    uses: henry-hsieh/setup-makeself@v1
   
   - name: Create self-extracting archive
     run: |
@@ -32,7 +32,7 @@ steps:
   - uses: actions/checkout@v4
   
   - name: Setup Makeself
-    uses: henry-hsieh/makeself-action@v1
+    uses: henry-hsieh/setup-makeself@v1
     with:
       version: '2.5.0'
 ```
@@ -45,7 +45,7 @@ steps:
   
   - name: Setup Makeself
     id: makeself
-    uses: henry-hsieh/makeself-action@v1
+    uses: henry-hsieh/setup-makeself@v1
   
   - name: Show version
     run: |
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Makeself
-        uses: henry-hsieh/makeself-action@v1
+        uses: henry-hsieh/setup-makeself@v1
       
       - name: Prepare application
         run: |
