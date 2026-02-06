@@ -1,0 +1,92 @@
+name: 'Setup Makeself'
+description: 'Set up makeself.sh for creating self-extracting archives in your GitHub Actions workflow'
+author: 'Your Name'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  version:
+    description: 'Version of makeself to install (e.g., "2.7.1"). Use "latest" for the most recent release.'
+    required: false
+    default: 'latest'
+
+outputs:
+  version:
+    description: 'The installed version of makeself'
+    value: ${{ steps.setup.outputs.version }}
+  makeself-path:
+    description: 'Path to the makeself.sh script'
+    value: ${{ steps.setup.outputs.makeself-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Makeself
+      id: setup
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        # Determine version to install
+        VERSION="${INPUT_VERSION}"
+        
+        if [ "$VERSION" = "latest" ]; then
+          echo "Fetching latest makeself version..."
+          VERSION=$(curl -fsSL https://api.github.com/repos/megastep/makeself/releases/latest | grep '"tag_name"' | sed -E 's/.*"tag_name": *"release-([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Failed to fetch latest version"
+            exit 1
+          fi
+        fi
+        
+        echo "Installing makeself version: $VERSION"
+        
+        # Create installation directory
+        INSTALL_DIR="${HOME}/.makeself"
+        mkdir -p "$INSTALL_DIR"
+        
+        # Download makeself release
+        DOWNLOAD_URL="https://github.com/megastep/makeself/releases/download/release-${VERSION}/makeself-${VERSION}.run"
+        echo "Downloading from: $DOWNLOAD_URL"
+        
+        TEMP_DIR=$(mktemp -d)
+        cd "$TEMP_DIR"
+        
+        if ! curl -fsSL -o makeself.run "$DOWNLOAD_URL"; then
+          echo "::error::Failed to download makeself version $VERSION"
+          exit 1
+        fi
+        
+        # Extract makeself
+        chmod +x makeself.run
+        ./makeself.run --target "$INSTALL_DIR" --noexec
+        
+        # Verify installation
+        if [ ! -f "$INSTALL_DIR/makeself.sh" ]; then
+          echo "::error::makeself.sh not found after extraction"
+          exit 1
+        fi
+        
+        # Make scripts executable
+        chmod +x "$INSTALL_DIR/makeself.sh"
+        if [ -f "$INSTALL_DIR/makeself-header.sh" ]; then
+          chmod +x "$INSTALL_DIR/makeself-header.sh"
+        fi
+        
+        # Add to PATH
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        
+        # Cleanup
+        cd -
+        rm -rf "$TEMP_DIR"
+        
+        # Set outputs
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "makeself-path=$INSTALL_DIR/makeself.sh" >> "$GITHUB_OUTPUT"
+        
+        echo "::notice::Successfully installed makeself $VERSION"
+        echo "Makeself is now available in your PATH"

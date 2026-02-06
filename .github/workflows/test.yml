@@ -1,0 +1,73 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-latest:
+    name: Test Latest Version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Makeself (latest)
+        id: makeself
+        uses: ./
+
+      - name: Verify installation
+        run: |
+          echo "Installed version: ${{ steps.makeself.outputs.version }}"
+          echo "Makeself path: ${{ steps.makeself.outputs.makeself-path }}"
+          
+          # Verify makeself is in PATH
+          which makeself.sh
+          
+          # Show version
+          makeself.sh --version
+
+      - name: Test creating archive
+        run: |
+          # Create test content
+          mkdir -p test-content
+          echo "Hello from makeself!" > test-content/hello.txt
+          echo '#!/bin/bash' > test-content/run.sh
+          echo 'echo "Installation complete!"' >> test-content/run.sh
+          chmod +x test-content/run.sh
+          
+          # Create self-extracting archive
+          makeself.sh test-content test-archive.run "Test Archive" ./run.sh
+          
+          # Verify archive was created
+          ls -la test-archive.run
+          file test-archive.run
+
+      - name: Test running archive
+        run: |
+          chmod +x test-archive.run
+          ./test-archive.run --info
+          ./test-archive.run
+
+  test-specific-version:
+    name: Test Specific Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Makeself (specific version)
+        id: makeself
+        uses: ./
+        with:
+          version: '2.5.0'
+
+      - name: Verify version
+        run: |
+          echo "Requested version 2.5.0"
+          echo "Installed version: ${{ steps.makeself.outputs.version }}"
+          makeself.sh --version
